@@ -1,0 +1,797 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quantum Scientific Calculator</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary: #6c5ce7;
+            --secondary: #a29bfe;
+            --dark: #2d3436;
+            --light: #f5f6fa;
+            --display-bg: rgba(255, 255, 255, 0.2);
+            --button-bg: rgba(255, 255, 255, 0.1);
+            --button-hover: rgba(255, 255, 255, 0.3);
+            --op-btn: #fd79a8;
+            --equals-btn: #00b894;
+            --sci-btn: #74b9ff;
+            --mem-btn: #0984e3;
+            --shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+            --glass-border: 1px solid rgba(255, 255, 255, 0.1);
+            --blur: blur(10px);
+        }
+
+        [data-theme="dark"] {
+            --primary: #8c7ae6;
+            --secondary: #706fd3;
+            --dark: #1e272e;
+            --light: #f5f6fa;
+            --display-bg: rgba(30, 39, 46, 0.8);
+            --button-bg: rgba(30, 39, 46, 0.5);
+            --button-hover: rgba(30, 39, 46, 0.7);
+            --op-btn: #e84393;
+            --equals-btn: #00cec9;
+            --sci-btn: #546de5;
+            --mem-btn: #0984e3;
+            --shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            transition: all 0.3s ease;
+        }
+
+        body {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: var(--light);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .calculator-container {
+            width: 100%;
+            max-width: 400px;
+            backdrop-filter: var(--blur);
+            border-radius: 20px;
+            padding: 20px;
+            box-shadow: var(--shadow);
+            border: var(--glass-border);
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .header h1 {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: white;
+        }
+
+        .header h1 span {
+            color: var(--secondary);
+            font-weight: 300;
+        }
+
+        .theme-toggle {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 24px;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: var(--secondary);
+            transition: .4s;
+            border-radius: 24px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 16px;
+            width: 16px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+
+        input:checked + .slider {
+            background-color: var(--primary);
+        }
+
+        input:checked + .slider:before {
+            transform: translateX(26px);
+        }
+
+        .display-container {
+            position: relative;
+            margin-bottom: 20px;
+        }
+
+        .history-panel {
+            background: var(--display-bg);
+            border-radius: 10px 10px 0 0;
+            padding: 15px;
+            max-height: 120px;
+            overflow-y: auto;
+            display: none;
+            backdrop-filter: var(--blur);
+        }
+
+        .history-panel.show {
+            display: block;
+            animation: fadeIn 0.3s;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .history-items {
+            display: flex;
+            flex-direction: column-reverse;
+            gap: 8px;
+        }
+
+        .history-item {
+            padding: 5px 0;
+            border-bottom: 1px dashed rgba(255, 255, 255, 0.2);
+            cursor: pointer;
+        }
+
+        .history-item:hover {
+            opacity: 0.8;
+        }
+
+        .clear-history {
+            background: var(--op-btn);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            padding: 5px 10px;
+            margin-top: 10px;
+            cursor: pointer;
+            width: 100%;
+        }
+
+        .display {
+            background: var(--display-bg);
+            border-radius: 10px;
+            padding: 20px;
+            text-align: right;
+            min-height: 100px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            backdrop-filter: var(--blur);
+        }
+
+        .calculation {
+            font-size: 1.2rem;
+            opacity: 0.7;
+            word-wrap: break-word;
+        }
+
+        .result {
+            font-size: 2.2rem;
+            font-weight: 700;
+            word-wrap: break-word;
+        }
+
+        .keypad {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 10px;
+        }
+
+        .btn {
+            border: none;
+            border-radius: 10px;
+            padding: 15px 0;
+            font-size: 1.1rem;
+            cursor: pointer;
+            font-weight: 500;
+            backdrop-filter: var(--blur);
+            background: var(--button-bg);
+            color: white;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn:hover {
+            background: var(--button-hover);
+        }
+
+        .btn:active {
+            transform: scale(0.95);
+        }
+
+        .num-btn {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .op-btn {
+            background: var(--op-btn);
+        }
+
+        .sci-btn {
+            background: var(--sci-btn);
+            font-size: 0.9rem;
+        }
+
+        .mem-btn {
+            background: var(--mem-btn);
+            font-size: 0.9rem;
+        }
+
+        .equals-btn {
+            background: var(--equals-btn);
+            grid-column: span 1;
+        }
+
+        .memory-indicator {
+            position: absolute;
+            bottom: -25px;
+            right: 20px;
+            background: var(--mem-btn);
+            color: white;
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .memory-indicator.active {
+            opacity: 1;
+        }
+
+        @media (max-width: 500px) {
+            .keypad {
+                grid-template-columns: repeat(4, 1fr);
+            }
+            
+            .btn {
+                padding: 12px 0;
+            }
+            
+            .result {
+                font-size: 1.8rem;
+            }
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            20%, 60% { transform: translateX(-5px); }
+            40%, 80% { transform: translateX(5px); }
+        }
+
+        .shake {
+            animation: shake 0.4s ease;
+        }
+
+        @keyframes pop {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+
+        .pop {
+            animation: pop 0.2s ease;
+        }
+    </style>
+</head>
+<body>
+    <div class="calculator-container">
+        <header class="header">
+            <h1>Quantum<span>Calc</span></h1>
+            <div class="theme-toggle">
+                <i class="fas fa-sun"></i>
+                <label class="switch">
+                    <input type="checkbox" id="theme-switch">
+                    <span class="slider"></span>
+                </label>
+                <i class="fas fa-moon"></i>
+            </div>
+        </header>
+
+        <div class="calculator">
+            <div class="display-container">
+                <div class="history-panel" id="history-panel">
+                    <div class="history-items" id="history-items"></div>
+                    <button class="clear-history" id="clear-history">Clear History</button>
+                </div>
+                <div class="display">
+                    <div class="calculation" id="calculation"></div>
+                    <div class="result" id="result">0</div>
+                </div>
+            </div>
+
+            <div class="keypad">
+                <button class="btn sci-btn" data-fn="Math.sin(">sin</button>
+                <button class="btn sci-btn" data-fn="Math.cos(">cos</button>
+                <button class="btn sci-btn" data-fn="Math.tan(">tan</button>
+                <button class="btn sci-btn" data-fn="Math.asin(">sin⁻¹</button>
+                <button class="btn sci-btn" data-fn="Math.acos(">cos⁻¹</button>
+                <button class="btn sci-btn" data-fn="Math.atan(">tan⁻¹</button>
+                
+                <button class="btn sci-btn" data-fn="Math.log10(">log</button>
+                <button class="btn sci-btn" data-fn="Math.log(">ln</button>
+                <button class="btn sci-btn" data-fn="Math.PI">π</button>
+                <button class="btn sci-btn" data-fn="Math.E">e</button>
+                <button class="btn sci-btn" data-fn="**2">x²</button>
+                <button class="btn sci-btn" data-fn="**3">x³</button>
+                <button class="btn sci-btn" data-fn="10**">10ˣ</button>
+                <button class="btn sci-btn" data-fn="Math.exp(">eˣ</button>
+                <button class="btn sci-btn" data-fn="Math.sqrt(">√</button>
+                <button class="btn sci-btn" data-fn="Math.cbrt(">∛</button>
+                <button class="btn sci-btn" id="nth-root">ʸ√x</button>
+                <button class="btn sci-btn" id="factorial">x!</button>
+                <button class="btn sci-btn" data-fn="(">(</button>
+                <button class="btn sci-btn" data-fn=")">)</button>
+
+                <button class="btn mem-btn" id="memory-add">M+</button>
+                <button class="btn mem-btn" id="memory-subtract">M-</button>
+                <button class="btn mem-btn" id="memory-recall">MR</button>
+                <button class="btn mem-btn" id="memory-clear">MC</button>
+                
+                <button class="btn op-btn" id="clear-all">AC</button>
+                <button class="btn op-btn" id="backspace"><i class="fas fa-backspace"></i></button>
+                <button class="btn op-btn" data-op="%">%</button>
+                <button class="btn op-btn" data-op="/">÷</button>
+                
+                <button class="btn num-btn" data-num="7">7</button>
+                <button class="btn num-btn" data-num="8">8</button>
+                <button class="btn num-btn" data-num="9">9</button>
+                <button class="btn op-btn" data-op="*">×</button>
+                
+                <button class="btn num-btn" data-num="4">4</button>
+                <button class="btn num-btn" data-num="5">5</button>
+                <button class="btn num-btn" data-num="6">6</button>
+                <button class="btn op-btn" data-op="-">−</button>
+                
+                <button class="btn num-btn" data-num="1">1</button>
+                <button class="btn num-btn" data-num="2">2</button>
+                <button class="btn num-btn" data-num="3">3</button>
+                <button class="btn op-btn" data-op="+">+</button>
+                
+                <button class="btn num-btn" id="plus-minus">±</button>
+                <button class="btn num-btn" data-num="0">0</button>
+                <button class="btn num-btn" id="decimal">.</button>
+                <button class="btn equals-btn" id="equals">=</button>
+            </div>
+        </div>
+
+        <div class="memory-indicator" id="memory-indicator">
+            <i class="fas fa-memory"></i> <span id="memory-value">0</span>
+        </div>
+    </div>
+
+    <script>
+        class ScientificCalculator {
+            constructor() {
+                this.currentInput = '0';
+                this.calculation = '';
+                this.memoryValue = 0;
+                this.history = [];
+                this.isDarkMode = false;
+
+                // DOM Elements
+                this.resultElement = document.getElementById('result');
+                this.calculationElement = document.getElementById('calculation');
+                this.historyItemsElement = document.getElementById('history-items');
+                this.historyPanel = document.getElementById('history-panel');
+                this.memoryIndicator = document.getElementById('memory-indicator');
+                this.memoryValueElement = document.getElementById('memory-value');
+                this.themeSwitch = document.getElementById('theme-switch');
+
+                // Initialize
+                this.initEventListeners();
+                this.updateDisplay();
+            }
+
+            initEventListeners() {
+                // Theme toggle
+                this.themeSwitch.addEventListener('change', () => this.toggleTheme());
+
+                // Number buttons
+                document.querySelectorAll('[data-num]').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        this.appendNumber(btn.getAttribute('data-num'));
+                        btn.classList.add('pop');
+                        setTimeout(() => btn.classList.remove('pop'), 200);
+                    });
+                });
+
+                // Operator buttons
+                document.querySelectorAll('[data-op]').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        this.handleOperator(btn.getAttribute('data-op'));
+                        btn.classList.add('pop');
+                        setTimeout(() => btn.classList.remove('pop'), 200);
+                    });
+                });
+
+                // Scientific functions
+                document.querySelectorAll('[data-fn]').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        this.handleScientificFunction(btn.getAttribute('data-fn'));
+                        btn.classList.add('pop');
+                        setTimeout(() => btn.classList.remove('pop'), 200);
+                    });
+                });
+
+                // Special buttons
+                document.getElementById('decimal').addEventListener('click', () => {
+                    this.appendDecimal();
+                    document.getElementById('decimal').classList.add('pop');
+                    setTimeout(() => document.getElementById('decimal').classList.remove('pop'), 200);
+                });
+                
+                document.getElementById('plus-minus').addEventListener('click', () => {
+                    this.toggleSign();
+                    document.getElementById('plus-minus').classList.add('pop');
+                    setTimeout(() => document.getElementById('plus-minus').classList.remove('pop'), 200);
+                });
+                
+                document.getElementById('equals').addEventListener('click', () => {
+                    this.calculateResult();
+                    document.getElementById('equals').classList.add('pop');
+                    setTimeout(() => document.getElementById('equals').classList.remove('pop'), 200);
+                });
+                
+                document.getElementById('clear-all').addEventListener('click', () => {
+                    this.clearAll();
+                    document.getElementById('clear-all').classList.add('pop');
+                    setTimeout(() => document.getElementById('clear-all').classList.remove('pop'), 200);
+                });
+                
+                document.getElementById('backspace').addEventListener('click', () => {
+                    this.backspace();
+                    document.getElementById('backspace').classList.add('pop');
+                    setTimeout(() => document.getElementById('backspace').classList.remove('pop'), 200);
+                });
+                
+                // Memory functions
+                document.getElementById('memory-add').addEventListener('click', () => {
+                    this.memoryAdd();
+                    document.getElementById('memory-add').classList.add('pop');
+                    setTimeout(() => document.getElementById('memory-add').classList.remove('pop'), 200);
+                });
+                
+                document.getElementById('memory-subtract').addEventListener('click', () => {
+                    this.memorySubtract();
+                    document.getElementById('memory-subtract').classList.add('pop');
+                    setTimeout(() => document.getElementById('memory-subtract').classList.remove('pop'), 200);
+                });
+                
+                document.getElementById('memory-recall').addEventListener('click', () => {
+                    this.memoryRecall();
+                    document.getElementById('memory-recall').classList.add('pop');
+                    setTimeout(() => document.getElementById('memory-recall').classList.remove('pop'), 200);
+                });
+                
+                document.getElementById('memory-clear').addEventListener('click', () => {
+                    this.memoryClear();
+                    document.getElementById('memory-clear').classList.add('pop');
+                    setTimeout(() => document.getElementById('memory-clear').classList.remove('pop'), 200);
+                });
+                
+                // Special functions
+                document.getElementById('factorial').addEventListener('click', () => {
+                    this.factorial();
+                    document.getElementById('factorial').classList.add('pop');
+                    setTimeout(() => document.getElementById('factorial').classList.remove('pop'), 200);
+                });
+                
+                document.getElementById('nth-root').addEventListener('click', () => {
+                    this.nthRoot();
+                    document.getElementById('nth-root').classList.add('pop');
+                    setTimeout(() => document.getElementById('nth-root').classList.remove('pop'), 200);
+                });
+                
+                // History panel
+                document.getElementById('clear-history').addEventListener('click', () => this.clearHistory());
+
+                // Keyboard support
+                document.addEventListener('keydown', (e) => this.handleKeyboardInput(e));
+            }
+
+            toggleTheme() {
+                this.isDarkMode = !this.isDarkMode;
+                document.body.setAttribute('data-theme', this.isDarkMode ? 'dark' : 'light');
+            }
+
+            updateDisplay() {
+                this.resultElement.textContent = this.currentInput;
+                this.calculationElement.textContent = this.calculation;
+
+                // Update memory indicator
+                if (this.memoryValue !== 0) {
+                    this.memoryIndicator.classList.add('active');
+                    this.memoryValueElement.textContent = this.memoryValue;
+                } else {
+                    this.memoryIndicator.classList.remove('active');
+                }
+            }
+
+            updateHistory() {
+                this.historyItemsElement.innerHTML = '';
+                this.history.slice().reverse().forEach(item => {
+                    const historyItem = document.createElement('div');
+                    historyItem.className = 'history-item';
+                    historyItem.textContent = item;
+                    historyItem.addEventListener('click', () => {
+                        const [calc, result] = item.split('=');
+                        this.calculation = calc;
+                        this.currentInput = result;
+                        this.updateDisplay();
+                    });
+                    this.historyItemsElement.appendChild(historyItem);
+                });
+            }
+
+            appendNumber(num) {
+                if (this.currentInput === '0') {
+                    this.currentInput = num;
+                } else {
+                    this.currentInput += num;
+                }
+                this.updateDisplay();
+            }
+
+            appendDecimal() {
+                if (!this.currentInput.includes('.')) {
+                    this.currentInput += '.';
+                    this.updateDisplay();
+                }
+            }
+
+            toggleSign() {
+                this.currentInput = this.currentInput.startsWith('-') ? 
+                    this.currentInput.slice(1) : `-${this.currentInput}`;
+                this.updateDisplay();
+            }
+
+            handleOperator(op) {
+                if (op === 'AC') {
+                    this.clearAll();
+                } else if (op === '⌫') {
+                    this.backspace();
+                } else {
+                    if (this.calculation === '' && this.currentInput === '0') {
+                        return;
+                    }
+                    
+                    if (this.calculation !== '' && this.currentInput === '0') {
+                        this.calculation = this.calculation.slice(0, -1) + op;
+                    } else {
+                        this.calculation += this.currentInput + op;
+                        this.currentInput = '0';
+                    }
+                    this.updateDisplay();
+                }
+            }
+
+            handleScientificFunction(fn) {
+                if (fn === 'Math.PI') {
+                    this.currentInput = Math.PI.toString();
+                } else if (fn === 'Math.E') {
+                    this.currentInput = Math.E.toString();
+                } else if (fn === '**2') {
+                    this.currentInput = (parseFloat(this.currentInput) ** 2).toString();
+                } else if (fn === '**3') {
+                    this.currentInput = (parseFloat(this.currentInput) ** 3).toString();
+                } else if (fn === '10**') {
+                    this.currentInput = '10**';
+                } else if (fn === 'Math.exp(') {
+                    this.currentInput = 'Math.exp(';
+                } else {
+                    this.currentInput = fn;
+                }
+                this.updateDisplay();
+            }
+
+            calculateResult() {
+                try {
+                    if (this.calculation === '' && this.currentInput === '0') {
+                        return;
+                    }
+                    
+                    let expression = this.calculation + this.currentInput;
+                    
+                    // Replace functions for evaluation
+                    expression = expression
+                        .replace(/sin\(/g, 'Math.sin(')
+                        .replace(/cos\(/g, 'Math.cos(')
+                        .replace(/tan\(/g, 'Math.tan(')
+                        .replace(/sin⁻¹\(/g, 'Math.asin(')
+                        .replace(/cos⁻¹\(/g, 'Math.acos(')
+                        .replace(/tan⁻¹\(/g, 'Math.atan(')
+                        .replace(/log\(/g, 'Math.log10(')
+                        .replace(/ln\(/g, 'Math.log(')
+                        .replace(/\^/g, '**')
+                        .replace(/÷/g, '/')
+                        .replace(/×/g, '*')
+                        .replace(/−/g, '-');
+                    
+                    const result = eval(expression);
+                    const historyEntry = `${this.calculation}${this.currentInput}=${result}`;
+                    
+                    // Add to history
+                    this.history.push(historyEntry);
+                    if (this.history.length > 10) {
+                        this.history.shift();
+                    }
+                    
+                    this.calculation = '';
+                    this.currentInput = result.toString();
+                    this.updateDisplay();
+                    this.updateHistory();
+                } catch (error) {
+                    this.showError();
+                }
+            }
+
+            clearAll() {
+                this.currentInput = '0';
+                this.calculation = '';
+                this.updateDisplay();
+            }
+
+            backspace() {
+                this.currentInput = this.currentInput.length > 1 ? 
+                    this.currentInput.slice(0, -1) : '0';
+                this.updateDisplay();
+            }
+
+            factorial() {
+                const num = parseInt(this.currentInput);
+                if (num < 0 || !Number.isInteger(num)) {
+                    this.showError();
+                    return;
+                }
+                let result = 1;
+                for (let i = 2; i <= num; i++) result *= i;
+                this.currentInput = result.toString();
+                this.updateDisplay();
+            }
+
+            nthRoot() {
+                const base = parseFloat(this.currentInput);
+                const root = parseFloat(prompt("Enter root (e.g., 3 for cube root):"));
+                if (!isNaN(root) && root !== 0) {
+                    this.currentInput = Math.pow(base, 1/root).toString();
+                    this.updateDisplay();
+                }
+            }
+
+            memoryAdd() {
+                this.memoryValue += parseFloat(this.currentInput) || 0;
+                this.updateDisplay();
+            }
+
+            memorySubtract() {
+                this.memoryValue -= parseFloat(this.currentInput) || 0;
+                this.updateDisplay();
+            }
+
+            memoryRecall() {
+                if (this.memoryValue !== 0) {
+                    this.currentInput = this.memoryValue.toString();
+                    this.updateDisplay();
+                }
+            }
+
+            memoryClear() {
+                this.memoryValue = 0;
+                this.updateDisplay();
+            }
+
+            clearHistory() {
+                this.history = [];
+                this.historyItemsElement.innerHTML = '';
+            }
+
+            handleKeyboardInput(e) {
+                const key = e.key;
+                
+                if (/[0-9]/.test(key)) {
+                    this.appendNumber(key);
+                    const btn = document.querySelector(`[data-num="${key}"]`);
+                    if (btn) btn.classList.add('pop');
+                    setTimeout(() => {
+                        if (btn) btn.classList.remove('pop');
+                    }, 200);
+                } else if (key === '.') {
+                    this.appendDecimal();
+                    document.getElementById('decimal').classList.add('pop');
+                    setTimeout(() => document.getElementById('decimal').classList.remove('pop'), 200);
+                } else if (key === '+' || key === '-' || key === '*' || key === '/') {
+                    this.handleOperator(key);
+                    const btn = document.querySelector(`[data-op="${key}"]`);
+                    if (btn) btn.classList.add('pop');
+                    setTimeout(() => {
+                        if (btn) btn.classList.remove('pop');
+                    }, 200);
+                } else if (key === '%') {
+                    this.handleOperator('%');
+                    document.querySelector('[data-op="%"]').classList.add('pop');
+                    setTimeout(() => document.querySelector('[data-op="%"]').classList.remove('pop'), 200);
+                } else if (key === '(' || key === ')') {
+                    this.handleScientificFunction(key);
+                    const btn = document.querySelector(`[data-fn="${key}"]`);
+                    if (btn) btn.classList.add('pop');
+                    setTimeout(() => {
+                        if (btn) btn.classList.remove('pop');
+                    }, 200);
+                } else if (key === 'Enter' || key === '=') {
+                    this.calculateResult();
+                    document.getElementById('equals').classList.add('pop');
+                    setTimeout(() => document.getElementById('equals').classList.remove('pop'), 200);
+                } else if (key === 'Backspace') {
+                    this.backspace();
+                    document.getElementById('backspace').classList.add('pop');
+                    setTimeout(() => document.getElementById('backspace').classList.remove('pop'), 200);
+                } else if (key === 'Escape') {
+                    this.clearAll();
+                    document.getElementById('clear-all').classList.add('pop');
+                    setTimeout(() => document.getElementById('clear-all').classList.remove('pop'), 200);
+                }
+            }
+
+            showError() {
+                this.currentInput = 'Error';
+                this.calculation = '';
+                this.resultElement.classList.add('shake');
+                setTimeout(() => {
+                    this.resultElement.classList.remove('shake');
+                    this.currentInput = '0';
+                    this.updateDisplay();
+                }, 500);
+            }
+        }
+
+        // Initialize calculator when DOM is loaded
+        document.addEventListener('DOMContentLoaded', () => {
+            const calculator = new ScientificCalculator();
+        });
+    </script>
+</body>
+</html>
