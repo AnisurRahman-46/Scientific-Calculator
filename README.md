@@ -90,4 +90,3 @@ All functionality is handled by the `ScientificCalculator` class.
       * `factorial()`, `nthRoot()`: Implement logic for special functions that require more than a simple expression replacement.
       * `showError()`: Displays an error message and triggers the shake animation if a calculation is invalid.
 
-Let's See the code
